@@ -100,10 +100,10 @@ public:
     OFBool presentationLUTnegotiated,
     DVPSPresentationLUT_PList& globalPresentationLUTList);
 
-  /** performs a Print SCP Basic Grayscale Image Box N-SET operation.
+  /** performs a Print SCP Basic Grayscale or Color Image Box N-SET operation.
    *  The results of the N-SET operation are stored in the
    *  objects passed as rsp and rspDataset.
-   *  If successful, a Hardcopy Grayscale Image object containing
+   *  If successful, a Hardcopy Grayscale or Color Image object containing
    *  the image data of the N-SET request is created in the database.
    *  @param cfg config file facility
    *  @param cfgname symbolic printer name in config file
@@ -115,7 +115,7 @@ public:
    *    OFTrue if support for the Presentation LUT SOP class
    *    has been negotiated at association negotiation
    */
-  void printSCPBasicGrayscaleImageBoxSet(
+  void printSCPBasicGrayscaleColorImageBoxSet(
     DVInterface& cfg,
     const char *cfgname,
     T_DIMSE_Message& rq,

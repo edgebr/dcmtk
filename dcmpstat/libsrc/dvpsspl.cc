@@ -118,7 +118,7 @@ void DVPSStoredPrint_PList::printSCPBasicFilmBoxSet(
 }
 
 
-void DVPSStoredPrint_PList::printSCPBasicGrayscaleImageBoxSet(
+void DVPSStoredPrint_PList::printSCPBasicGrayscaleColorImageBoxSet(
     DVInterface& cfg,
     const char *cfgname,
     T_DIMSE_Message& rq,

@@ -153,12 +153,13 @@ DVPSAssociationNegotiationResult DVPSPrintSCP::negotiateAssociation(T_ASC_Networ
       {
         UID_VerificationSOPClass,
         UID_BasicGrayscalePrintManagementMetaSOPClass,
+        UID_BasicColorPrintManagementMetaSOPClass,
         UID_PresentationLUTSOPClass,
         UID_PrivateShutdownSOPClass
       };
 
-      int numAbstractSyntaxes = 3;
-      if (supportPresentationLUT) numAbstractSyntaxes = 4;
+      int numAbstractSyntaxes = 4;
+      if (supportPresentationLUT) numAbstractSyntaxes = 5;
 
       const char* transferSyntaxes[] = { NULL, NULL, NULL };
       int numTransferSyntaxes = 0;
@@ -491,7 +492,7 @@ OFCondition DVPSPrintSCP::handleNSet(T_DIMSE_Message& rq, T_ASC_PresentationCont
   {
     // BFB N-SET
     filmBoxNSet(rq, rqDataset, rsp, rspDataset);
-  } else if (sopClass == UID_BasicGrayscaleImageBoxSOPClass)
+  } else if ((sopClass == UID_BasicGrayscaleImageBoxSOPClass) || (sopClass == UID_BasicColorImageBoxSOPClass))
   {
     // BGIB N-SET
     imageBoxNSet(rq, rqDataset, rsp, rspDataset);
@@ -981,7 +982,7 @@ void DVPSPrintSCP::imageBoxNSet(T_DIMSE_Message& rq, DcmDataset *rqDataset, T_DI
 {
   OFBool usePLUT = OFFalse;
   if (assoc && (0 != ASC_findAcceptedPresentationContextID(assoc, UID_PresentationLUTSOPClass))) usePLUT = OFTrue;
-  storedPrintList.printSCPBasicGrayscaleImageBoxSet(dviface, cfgname, rq, rqDataset, rsp, rspDataset, usePLUT);
+  storedPrintList.printSCPBasicGrayscaleColorImageBoxSet(dviface, cfgname, rq, rqDataset, rsp, rspDataset, usePLUT);
 }
 
 void DVPSPrintSCP::addLogEntry(DcmSequenceOfItems *seq, const char *text)

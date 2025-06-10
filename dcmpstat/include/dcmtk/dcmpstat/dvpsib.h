@@ -254,7 +254,7 @@ public:
    */
   OFBool matchesPresentationLUT(DVPSPrintPresentationLUTAlignment align) const;
 
-  /** performs a Print SCP Basic Grayscale Image Box N-SET operation.
+  /** performs a Print SCP Basic Grayscale or Color Image Box N-SET operation.
    *  The results of the N-SET operation are stored in the objects passed as
    *  rsp and rspDataset.
    *  @param cfg config file facility
@@ -262,7 +262,7 @@ public:
    *  @param rqDataset N-SET request dataset
    *  @param rsp N-SET response message
    *  @param rspDataset N-SET response dataset passed back in this parameter
-   *  @param imageDataset a hardcopy grayscale image (without general study
+   *  @param imageDataset a hardcopy grayscale or color image (without general study
    *     and general series modules which must be added by the caller)
    *     containing the image data from the N-SET request is written to
    *     this dataset if the method returns successfully.
@@ -327,6 +327,34 @@ private:
    *  @return OFTrue if N-SET operation was successful, OFFalse otherwise.
    */
   OFBool printSCPEvaluateBasicGrayscaleImageSequence(
+   DVConfiguration& cfg,
+   const char *cfgname,
+   DcmItem *rqDataset,
+   T_DIMSE_Message& rsp,
+   DcmDataset &imageDataset,
+   DVPSPrintPresentationLUTAlignment align,
+   OFBool presentationLUTnegotiated);
+
+  /** evaluates the contents of the Basic Color Image Sequence during a
+   *  Print SCP Basic Color Image Box N-SET operation.
+   *  The results of the N-SET operation are stored in the object passed as rsp.
+   *  @param cfg config file facility
+   *  @param cfgname symbolic printer name in config file
+   *  @param rqDataset first item of the Basic Color Image Sequence
+   *  @param rsp N-SET response message
+   *  @param imageDataset a hardcopy color image (without general study
+   *     and general series modules which must be added by the caller)
+   *     containing the image data from the N-SET request is written to
+   *     this dataset if the method returns successfully.
+   *  @param align describes the current Presentation LUT. Used if the Print
+   *     SCP has been configured to enforce a matching of Presentation LUT
+   *     and pixel data bit depth.
+   *  @param presentationLUTnegotiated
+   *    OFTrue if support for the Presentation LUT SOP class
+   *    has been negotiated at association negotiation
+   *  @return OFTrue if N-SET operation was successful, OFFalse otherwise.
+   */
+  OFBool printSCPEvaluateBasicColorImageSequence(
    DVConfiguration& cfg,
    const char *cfgname,
    DcmItem *rqDataset,

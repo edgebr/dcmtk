@@ -176,7 +176,7 @@ private:
    */
   void filmBoxNSet(T_DIMSE_Message& rq, DcmDataset *rqDataset, T_DIMSE_Message& rsp, DcmDataset *& rspDataset);
 
-  /** implements the N-SET operation for the Basic Grayscale Image Box SOP Class.
+  /** implements the N-SET operation for the Basic Grayscale or Color Image Box SOP Class.
    *  @param rq request message
    *  @param rqDataset request dataset, may be NULL
    *  @param rsp response message, already initialized

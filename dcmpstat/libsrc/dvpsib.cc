@@ -883,8 +883,19 @@ OFBool DVPSImageBoxContent::printSCPSet(
         rsp.msg.NSetRSP.DimseStatus = STATUS_N_InvalidAttributeValue;
         result = OFFalse;
       }
+    } else if (rqDataset && (EC_Normal == rqDataset->search(DCM_BasicColorImageSequence, stack, ESM_fromHere, OFFalse))){
+      DcmSequenceOfItems *seq=(DcmSequenceOfItems *)stack.top();
+      if (seq->card() ==1)
+      {
+         DcmItem *item = seq->getItem(0);
+         result = printSCPEvaluateBasicColorImageSequence(cfg, cfgname, item, rsp, imageDataset, align, presentationLUTnegotiated);
+      } else {
+        DCMPSTAT_WARN("cannot update Basic Color Image Box: basic color image sequence number of items != 1");
+        rsp.msg.NSetRSP.DimseStatus = STATUS_N_InvalidAttributeValue;
+        result = OFFalse;
+      }
     } else {
-      DCMPSTAT_WARN("cannot update Basic Grayscale Image Box: basic grayscale image sequence missing.");
+      DCMPSTAT_WARN("cannot update Basic Grayscale or Color Image Box: basic grayscale or color image sequence missing.");
       rsp.msg.NSetRSP.DimseStatus = STATUS_N_MissingAttribute;
       result = OFFalse;
     }
@@ -908,6 +919,7 @@ OFBool DVPSImageBoxContent::printSCPSet(
       else if (currentTag == DCM_SmoothingType) /* OK */ ;
       else if (currentTag == DCM_ConfigurationInformation) /* OK */ ;
       else if (currentTag == DCM_BasicGrayscaleImageSequence) /* OK */ ;
+      else if (currentTag == DCM_BasicColorImageSequence) /* OK */;
       else
       {
         DCMPSTAT_WARN("cannot update Basic Grayscale Image Box: unsupported attribute received:\n"
@@ -931,6 +943,391 @@ OFBool DVPSImageBoxContent::printSCPSet(
   return result;
 }
 
+OFBool DVPSImageBoxContent::printSCPEvaluateBasicColorImageSequence(
+  DVConfiguration& cfg,
+  const char *cfgname,
+  DcmItem *rqDataset,
+  T_DIMSE_Message& rsp,
+  DcmDataset &imageDataset,
+  DVPSPrintPresentationLUTAlignment align,
+  OFBool presentationLUTnegotiated)
+{
+  OFBool result = OFTrue;
+  DcmStack stack;
+  OFCondition writeresult = EC_Normal;
+  DcmElement *delem = NULL;
+  DcmDataset *rspDataset = &imageDataset;
+
+  if (rqDataset == NULL)
+  {
+    rsp.msg.NSetRSP.DimseStatus = STATUS_N_ProcessingFailure;
+    result = OFFalse;
+  }
+
+  DcmUnsignedShort samplesPerPixel(DCM_SamplesPerPixel);
+  DcmCodeString photometricInterpretation(DCM_PhotometricInterpretation);
+  DcmUnsignedShort rows(DCM_Rows);
+  DcmUnsignedShort columns(DCM_Columns);
+  DcmIntegerString pixelAspectRatio(DCM_PixelAspectRatio);
+  DcmUnsignedShort bitsAllocated(DCM_BitsAllocated);
+  DcmUnsignedShort bitsStored(DCM_BitsStored);
+  DcmUnsignedShort highBit(DCM_HighBit);
+  DcmUnsignedShort pixelRepresentation(DCM_PixelRepresentation);
+  DcmUnsignedShort PlanarConfiguration(DCM_PlanarConfiguration);
+  DcmPixelData *pixelData = NULL;
+  Uint16 val=0;
+  char newuid[70];
+  OFString aString;
+
+  // samplesPerPixel
+  if (result)
+  {
+    stack.clear();
+    if (rqDataset && (EC_Normal == rqDataset->search((DcmTagKey &)samplesPerPixel.getTag(), stack, ESM_fromHere, OFFalse)))
+    {
+      samplesPerPixel = *((DcmUnsignedShort *)(stack.top()));
+      val = 0;
+      if ((EC_Normal == samplesPerPixel.getUint16(val,0)) && (val == 3))
+      {
+        ADD_TO_PDATASET(DcmUnsignedShort, samplesPerPixel)
+      } else {
+        DCMPSTAT_WARN("cannot update Basic Color Image Box: illegal samples per pixel value: " << val);
+        rsp.msg.NSetRSP.DimseStatus = STATUS_N_InvalidAttributeValue;
+        result = OFFalse;
+      }
+    } else {
+      DCMPSTAT_WARN("cannot update Basic Color Image Box: samples per pixel missing in basic color image sequence");
+      rsp.msg.NSetRSP.DimseStatus = STATUS_N_MissingAttribute;
+      result = OFFalse;
+    }
+  }
+
+  // rows
+  if (result)
+  {
+    stack.clear();
+    if (rqDataset && (EC_Normal == rqDataset->search((DcmTagKey &)rows.getTag(), stack, ESM_fromHere, OFFalse)))
+    {
+      rows = *((DcmUnsignedShort *)(stack.top()));
+      val = 0;
+      if ((EC_Normal == rows.getUint16(val,0)) && (val > 0))
+      {
+        ADD_TO_PDATASET(DcmUnsignedShort, rows)
+      } else {
+        DCMPSTAT_WARN("cannot update Basic Color Image Box: illegal rows value: " << val);
+        rsp.msg.NSetRSP.DimseStatus = STATUS_N_InvalidAttributeValue;
+        result = OFFalse;
+      }
+    } else {
+      DCMPSTAT_WARN("cannot update Basic Color Image Box: rows missing in basic color image sequence");
+      rsp.msg.NSetRSP.DimseStatus = STATUS_N_MissingAttribute;
+      result = OFFalse;
+    }
+  }
+
+  // columns
+  if (result)
+  {
+    stack.clear();
+    if (rqDataset && (EC_Normal == rqDataset->search((DcmTagKey &)columns.getTag(), stack, ESM_fromHere, OFFalse)))
+    {
+      columns = *((DcmUnsignedShort *)(stack.top()));
+      val = 0;
+      if ((EC_Normal == columns.getUint16(val,0)) && (val > 0))
+      {
+        ADD_TO_PDATASET(DcmUnsignedShort, columns)
+      } else {
+        DCMPSTAT_WARN("cannot update Basic Color Image Box: illegal columns value: " << val);
+        rsp.msg.NSetRSP.DimseStatus = STATUS_N_InvalidAttributeValue;
+        result = OFFalse;
+      }
+    } else {
+      DCMPSTAT_WARN("cannot update Basic Color Image Box: columns missing in basic color image sequence");
+      rsp.msg.NSetRSP.DimseStatus = STATUS_N_MissingAttribute;
+      result = OFFalse;
+    }
+  }
+
+  Uint16 bitsStoredValue = 0;
+
+  // bitsStored
+  if (result)
+  {
+    stack.clear();
+    if (rqDataset && (EC_Normal == rqDataset->search((DcmTagKey &)bitsStored.getTag(), stack, ESM_fromHere, OFFalse)))
+    {
+      bitsStored = *((DcmUnsignedShort *)(stack.top()));
+      val = 0;
+      if ((EC_Normal == bitsStored.getUint16(val,0)) && ((val == 8) || (val == 12)))
+      {
+        bitsStoredValue = val;
+        if (bitsStoredValue==8) imageDepth = DVPSN_8bit; else imageDepth = DVPSN_12bit;
+        OFBool supports12Bit = cfg.getTargetPrinterSupports12BitTransmission(cfgname);
+        if ((bitsStoredValue == 12)&&(! supports12Bit))
+        {
+          DCMPSTAT_WARN("cannot update Basic Color Image Box: image transmission with 12 bits/pixel not supported.");
+          rsp.msg.NSetRSP.DimseStatus = STATUS_N_InvalidAttributeValue;
+          result = OFFalse;
+        } else {
+          if (presentationLUTnegotiated && (cfg.getTargetPrinterPresentationLUTMatchRequired(cfgname)) && (! matchesPresentationLUT(align)))
+          {
+            DCMPSTAT_WARN("cannot update Basic Color Image Box: image data with " << bitsStoredValue << " bits/pixel does not match characteristics of active Presentation LUT.");
+            rsp.msg.NSetRSP.DimseStatus = STATUS_N_InvalidAttributeValue;
+            result = OFFalse;
+          } else {
+            ADD_TO_PDATASET(DcmUnsignedShort, bitsStored)
+          }
+        }
+      } else {
+        DCMPSTAT_WARN("cannot update Basic Color Image Box: illegal bits stored value: " << val);
+        rsp.msg.NSetRSP.DimseStatus = STATUS_N_InvalidAttributeValue;
+        result = OFFalse;
+      }
+    } else {
+      DCMPSTAT_WARN("cannot update Basic Color Image Box: bits stored missing in basic color image sequence");
+      rsp.msg.NSetRSP.DimseStatus = STATUS_N_MissingAttribute;
+      result = OFFalse;
+    }
+  }
+
+  // bitsAllocated
+  if (result)
+  {
+    stack.clear();
+    if (rqDataset && (EC_Normal == rqDataset->search((DcmTagKey &)bitsAllocated.getTag(), stack, ESM_fromHere, OFFalse)))
+    {
+      bitsAllocated = *((DcmUnsignedShort *)(stack.top()));
+      val = 0;
+      if ((EC_Normal == bitsAllocated.getUint16(val,0)) && (((val == 8)&&(bitsStoredValue == 8)) || ((val == 16)&&(bitsStoredValue == 12))))
+      {
+        ADD_TO_PDATASET(DcmUnsignedShort, bitsAllocated)
+      } else {
+        DCMPSTAT_WARN("cannot update Basic Color Image Box: illegal bits allocated value: " << val);
+        rsp.msg.NSetRSP.DimseStatus = STATUS_N_InvalidAttributeValue;
+        result = OFFalse;
+      }
+    } else {
+      DCMPSTAT_WARN("cannot update Basic Color Image Box: bits allocated missing in basic color image sequence");
+      rsp.msg.NSetRSP.DimseStatus = STATUS_N_MissingAttribute;
+      result = OFFalse;
+    }
+  }
+
+  // highBit
+  if (result)
+  {
+    stack.clear();
+    if (rqDataset && (EC_Normal == rqDataset->search((DcmTagKey &)highBit.getTag(), stack, ESM_fromHere, OFFalse)))
+    {
+      highBit = *((DcmUnsignedShort *)(stack.top()));
+      val = 0;
+      if ((EC_Normal == highBit.getUint16(val,0)) && (((val == 7)&&(bitsStoredValue == 8)) || ((val == 11)&&(bitsStoredValue == 12))))
+      {
+        ADD_TO_PDATASET(DcmUnsignedShort, highBit)
+      } else {
+        DCMPSTAT_WARN("cannot update Basic Color Image Box: illegal high bit value: " << val);
+        rsp.msg.NSetRSP.DimseStatus = STATUS_N_InvalidAttributeValue;
+        result = OFFalse;
+      }
+    } else {
+      DCMPSTAT_WARN("cannot update Basic Color Image Box: high bit missing in basic color image sequence");
+      rsp.msg.NSetRSP.DimseStatus = STATUS_N_MissingAttribute;
+      result = OFFalse;
+    }
+  }
+
+  // pixelRepresentation
+  if (result)
+  {
+    stack.clear();
+    if (rqDataset && (EC_Normal == rqDataset->search((DcmTagKey &)pixelRepresentation.getTag(), stack, ESM_fromHere, OFFalse)))
+    {
+      pixelRepresentation = *((DcmUnsignedShort *)(stack.top()));
+      val = 0;
+      if ((EC_Normal == pixelRepresentation.getUint16(val,0)) && (val == 0))
+      {
+        ADD_TO_PDATASET(DcmUnsignedShort, pixelRepresentation)
+      } else {
+        DCMPSTAT_WARN("cannot update Basic Color Image Box: illegal pixel representation value: " << val);
+        rsp.msg.NSetRSP.DimseStatus = STATUS_N_InvalidAttributeValue;
+        result = OFFalse;
+      }
+    } else {
+      DCMPSTAT_WARN("cannot update Basic Color Image Box: pixel representation missing in basic color image sequence");
+      rsp.msg.NSetRSP.DimseStatus = STATUS_N_MissingAttribute;
+      result = OFFalse;
+    }
+  }
+
+  // photometricInterpretation
+  if (result)
+  {
+    stack.clear();
+    if (rqDataset && (EC_Normal == rqDataset->search((DcmTagKey &)photometricInterpretation.getTag(), stack, ESM_fromHere, OFFalse)))
+    {
+      photometricInterpretation = *((DcmCodeString *)(stack.top()));
+      OFString theColorModel;
+      photometricInterpretation.getOFString(theColorModel, 0, OFTrue);
+      if (theColorModel != "RGB")
+      {
+        DCMPSTAT_WARN("cannot update Basic Color Image Box: illegal photometric interpretation: '" << theColorModel.c_str() << "'");
+        rsp.msg.NSetRSP.DimseStatus = STATUS_N_InvalidAttributeValue;
+        result = OFFalse;
+      } else {
+        ADD_TO_PDATASET(DcmCodeString, photometricInterpretation)
+      }
+    } else {
+      DCMPSTAT_WARN("cannot update Basic Color Image Box: photometric interpretation missing in basic color image sequence");
+      rsp.msg.NSetRSP.DimseStatus = STATUS_N_MissingAttribute;
+      result = OFFalse;
+    }
+  }
+
+  // pixelAspectRatio
+  if (result)
+  {
+    stack.clear();
+    if (rqDataset && (EC_Normal == rqDataset->search((DcmTagKey &)pixelAspectRatio.getTag(), stack, ESM_fromHere, OFFalse)))
+    {
+      pixelAspectRatio = *((DcmIntegerString *)(stack.top()));
+      if (pixelAspectRatio.getVM() != 2)
+      {
+        DCMPSTAT_WARN("cannot update Basic Color Image Box: illegal pixel aspect ratio, VM=: '" << pixelAspectRatio.getVM());
+        rsp.msg.NSetRSP.DimseStatus = STATUS_N_InvalidAttributeValue;
+        result = OFFalse;
+      } else {
+        ADD_TO_PDATASET(DcmIntegerString, pixelAspectRatio)
+      }
+    }
+  }
+
+  //PlanarConfiguration
+
+  if (result)
+  {
+    stack.clear();
+
+    if(rqDataset && (EC_Normal == rqDataset->search((DcmTagKey &)PlanarConfiguration.getTag(), stack, ESM_fromHere, OFFalse)))
+    {
+      PlanarConfiguration = *((DcmUnsignedShort *)(stack.top()));
+      val = 0;
+      if ((EC_Normal == PlanarConfiguration.getUint16(val,0)) && (val <= 1))
+      {
+        ADD_TO_PDATASET(DcmUnsignedShort, PlanarConfiguration)
+      } else {
+        DCMPSTAT_WARN("cannot update Basic Color Image Box: PlanarConfiguration representation value: " << val);
+        rsp.msg.NSetRSP.DimseStatus = STATUS_N_InvalidAttributeValue;
+        result = OFFalse;
+      }
+    } else {
+      DCMPSTAT_WARN("cannot update Basic Color Image Box: PlanarConfiguration missing in basic color image sequence");
+      rsp.msg.NSetRSP.DimseStatus = STATUS_N_MissingAttribute;
+      result = OFFalse;
+    }
+  }
+
+  // pixelData
+  if (result)
+  {
+    stack.clear();
+    if (rqDataset && (EC_Normal == rqDataset->search(DCM_PixelData, stack, ESM_fromHere, OFFalse)))
+    {
+      pixelData = new DcmPixelData(DCM_PixelData);
+      if (pixelData)
+      {
+        DcmElement *oldPxData = (DcmElement *)(stack.top());
+        Uint16 *pxdata16 = NULL;
+        Uint8 *pxdata8 = NULL;
+        if ((EC_Normal == oldPxData->getUint16Array(pxdata16)) && pxdata16)
+        {
+          pixelData->putUint16Array(pxdata16, oldPxData->getLength()/sizeof(Uint16));
+          rspDataset->insert(pixelData, OFTrue /*replaceOld*/);
+        }
+        else if ((EC_Normal == oldPxData->getUint8Array(pxdata8)) && pxdata8)
+        {
+          pixelData->putUint8Array(pxdata8, oldPxData->getLength()/sizeof(Uint8));
+          rspDataset->insert(pixelData, OFTrue /*replaceOld*/);
+        } else {
+          DCMPSTAT_WARN("cannot update Basic Color Image Box: cannot access pixel data");
+          rsp.msg.NSetRSP.DimseStatus = STATUS_N_ProcessingFailure;
+          result = OFFalse;
+        }
+      } else writeresult=EC_MemoryExhausted;
+    } else {
+      DCMPSTAT_WARN("cannot update Basic Color Image Box: pixel data missing in basic color image sequence");
+      rsp.msg.NSetRSP.DimseStatus = STATUS_N_MissingAttribute;
+      result = OFFalse;
+    }
+  }
+
+  // browse through rqDataset and check for unsupported attributes
+  if (result && rqDataset)
+  {
+    OFBool intoSub = OFTrue;
+    stack.clear();
+    while (EC_Normal == rqDataset->nextObject(stack, intoSub))
+    {
+      intoSub = OFFalse;
+      const DcmTagKey& currentTag = (stack.top())->getTag();
+      if (currentTag.getElement() == 0x0000) /* group length */ ;
+      else if (currentTag == DCM_SamplesPerPixel) /* OK */ ;
+      else if (currentTag == DCM_PhotometricInterpretation) /* OK */ ;
+      else if (currentTag == DCM_Rows) /* OK */ ;
+      else if (currentTag == DCM_Columns) /* OK */ ;
+      else if (currentTag == DCM_PixelAspectRatio) /* OK */ ;
+      else if (currentTag == DCM_BitsAllocated) /* OK */ ;
+      else if (currentTag == DCM_BitsStored) /* OK */ ;
+      else if (currentTag == DCM_HighBit) /* OK */ ;
+      else if (currentTag == DCM_PixelRepresentation) /* OK */ ;
+      else if (currentTag == DCM_PixelData) /* OK */ ;
+      else if (currentTag == DCM_PlanarConfiguration) /* OK */ ;
+      else
+      {
+        DCMPSTAT_WARN("cannot update Basic Color Image Box: unsupported attribute in basic color image sequence:\n"
+            << DcmObject::PrintHelper(*stack.top(), DCMTypes::PF_shortenLongTagValues));
+        rsp.msg.NSetRSP.DimseStatus = STATUS_N_NoSuchAttribute;
+        result = OFFalse;
+      }
+    }
+  }
+
+  // if n-set was successful, send back response dataset
+  if (result && (EC_Normal == writeresult))
+  {
+    // complete Hardcopy Grayscale Image
+
+    // write patient module
+    if (EC_Normal==writeresult) writeresult = DVPSHelper::putStringValue(rspDataset, DCM_PatientName, DEFAULT_patientName);
+    if (EC_Normal==writeresult) writeresult = DVPSHelper::putStringValue(rspDataset, DCM_PatientID);
+    if (EC_Normal==writeresult) writeresult = DVPSHelper::putStringValue(rspDataset, DCM_PatientBirthDate);
+    if (EC_Normal==writeresult) writeresult = DVPSHelper::putStringValue(rspDataset, DCM_PatientSex);
+
+    // general study and general series modules are written somewhere else
+
+    // Hardcopy Equipment Module
+    if (EC_Normal==writeresult) writeresult = DVPSHelper::putStringValue(rspDataset, DCM_RETIRED_HardcopyDeviceManufacturer, "OFFIS");
+    if (EC_Normal==writeresult) writeresult = DVPSHelper::putStringValue(rspDataset, DCM_RETIRED_HardcopyDeviceSoftwareVersion, OFFIS_DTK_IMPLEMENTATION_VERSION_NAME);
+
+    // General Image Module
+    if (EC_Normal==writeresult) writeresult = DVPSHelper::putStringValue(rspDataset, DCM_InstanceNumber);
+    if (EC_Normal==writeresult) writeresult = DVPSHelper::putStringValue(rspDataset, DCM_PatientOrientation);
+    if (EC_Normal==writeresult) writeresult = DVPSHelper::putStringValue(rspDataset, DCM_ImageType, "DERIVED\\SECONDARY");
+    if (EC_Normal==writeresult) writeresult = DVPSHelper::putStringValue(rspDataset, DCM_DerivationDescription, "Hardcopy");
+
+    // SOP Common Module
+    if (EC_Normal==writeresult) writeresult = DVPSHelper::putStringValue(rspDataset, DCM_SOPClassUID, UID_RETIRED_HardcopyColorImageStorage);
+    if (EC_Normal==writeresult) writeresult = referencedSOPClassUID.putString(UID_RETIRED_HardcopyColorImageStorage);
+    dcmGenerateUniqueIdentifier(newuid);
+    if (EC_Normal==writeresult) writeresult = DVPSHelper::putStringValue(rspDataset, DCM_SOPInstanceUID, newuid);
+    if (EC_Normal==writeresult) writeresult = referencedSOPInstanceUID.putString(newuid);
+    DVPSHelper::currentDate(aString);
+    if (EC_Normal==writeresult) writeresult = DVPSHelper::putStringValue(rspDataset, DCM_InstanceCreationDate, aString.c_str());
+    DVPSHelper::currentTime(aString);
+    if (EC_Normal==writeresult) writeresult = DVPSHelper::putStringValue(rspDataset, DCM_InstanceCreationTime, aString.c_str());
+
+  } else result = OFFalse;
+  return result;
+}
 
 OFBool DVPSImageBoxContent::printSCPEvaluateBasicGrayscaleImageSequence(
   DVConfiguration& cfg,
