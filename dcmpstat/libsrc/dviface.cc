@@ -2058,6 +2058,7 @@ OFCondition DVInterface::deleteStudy(const char *studyUID)
                             study_desc[idx].StudySize = 0;
                             pHandle->DB_StudyDescChange(study_desc);
                         }
+                        result = EC_Normal;
                     }
                     free(study_desc);
                 }
@@ -2105,6 +2106,7 @@ OFCondition DVInterface::deleteSeries(const char *studyUID,
                             } while (series->List.gotoNext());
                             pHandle->DB_StudyDescChange(study_desc);
                         }
+                        result = EC_Normal;
                     }
                     free(study_desc);
                 }
