@@ -61,6 +61,10 @@ extern DCMTK_DCMPSTAT_EXPORT OFLogger DCM_dcmpstatLogfileLogger;
 #define DEFAULT_presentationLabel         "UNNAMED"
 #define DEFAULT_printerStatus             "NORMAL"
 #define DEFAULT_printerStatusInfo         "NORMAL"
+#define DEFAULT_printerName               "DCMTK_SCP"
+#define DEFAULT_manufacturer              "OFFIS"
+#define DEFAULT_softwareVersion           "3.6.8"
+#define DEFAULT_manufacturerModelName     "OFFIS DCMTK"
 #define DEFAULT_priority                  "MED"
 #define DEFAULT_reflectedAmbientLight     10
 #define DEFAULT_seriesNumber              "1"
