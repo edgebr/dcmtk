@@ -736,6 +736,18 @@ void DVPSPrintSCP::printerNGet(T_DIMSE_Message& rq, T_DIMSE_Message& rsp, DcmDat
       {
        if (EC_Normal != DVPSHelper::putStringValue(rspDataset, DCM_PrinterStatusInfo, DEFAULT_printerStatusInfo)) result = OFFalse;
       }
+      else if ((group == 0x2110)&&(element == 0x0030)) {
+        if (EC_Normal != DVPSHelper::putStringValue(rspDataset, DCM_PrinterName, DEFAULT_printerName)) result = OFFalse;
+      }
+      else if ((group == 0x0008)&&(element == 0x0070)) {
+        if (EC_Normal != DVPSHelper::putStringValue(rspDataset, DCM_Manufacturer, DEFAULT_manufacturer)) result = OFFalse;
+      }
+      else if ((group == 0x0018)&&(element == 0x1020)) {
+        if (EC_Normal != DVPSHelper::putStringValue(rspDataset, DCM_SoftwareVersions, DEFAULT_softwareVersion)) result = OFFalse;
+      }
+      else if ((group == 0x0008)&&(element == 0x1090)) {
+        if (EC_Normal != DVPSHelper::putStringValue(rspDataset, DCM_ManufacturerModelName, DEFAULT_manufacturerModelName)) result = OFFalse;
+      }
       else if (element == 0x0000)
       {
       	/* group length */
